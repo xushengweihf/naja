@@ -87,14 +87,43 @@ std::string LogFormatter::format(LogEvent::ptr event){
     return ss.str();
 }
 
+//%xxx %xxx{xxx} %%
 void LogFormatter::init(){
-    std::vector<std::pair<std::string, int>> vec;
-    size_t last_pos = 0;
-    for(size_t i = 0; i < m_pattern.size(); ++i){
-        if(m_pattern[i] == '%'){
-            if((i + 1) < m_pattern.size()){
-                
+    //str, format, type 这样的三元组格式
+    std::vector<std::tuple<std::string, std::string, int>> vec;
+    std::string nstr;
+    for (size_t i = 0; i < m_pattern.size(); ++i){
+        if (m_pattern[i] != '%'){
+            nstr.append(1, m_pattern[i]);
+            continue;
+        }
+        size_t j = i + 1;
+        int fmt_status = 0;//format的状态
+        size_t fmt_begin = 0;
+
+        std::string str;
+        std::string fmt;
+        while (j < m_pattern.size()){
+            if(isspace(m_pattern[j])){
+                break;
             }
+            if(fmt_status == 0) {
+                if(m_pattern[j] == '{') {
+                    str = m_pattern.substr(i + 1, j - i - 1);
+                    fmt_status = 1; //解析格式
+                    fmt_begin = j;
+                    j++;
+                    continue;
+                }
+            }else if(fmt_status == 1){
+                if(m_pattern[j] == '}') {
+                    fmt = m_pattern.substr(fmt_begin + 1, j - fmt_begin - 1);
+                    fmt_status = 2;
+                    ++j;
+                    continue;
+                }
+            }
+            
         }
     }
 }
