@@ -8,6 +8,7 @@
 #include <list>
 #include <fstream>
 #include <sstream>
+#include <vector>
 
 #define XSW_LOG_LEVEL(logger, level) \
     if(level >= logger->getLevel() ) xsw::LogWrap(logger).getLogger()->getSS()
@@ -52,9 +53,23 @@ public:
 class LogFormatter{
 public:
     typedef std::shared_ptr<LogFormatter> ptr;
+    LogFormatter(const std::string& pattern);
 
+    //%t    %thread_id %m%n
     std::string format(LogEvent::ptr event);
 private:
+    //日志解析的子模块
+    class FormatItem{
+    public:
+        typedef std::shared_ptr<FormatItem> ptr;
+        virtual ~FormatItem() {}
+        virtual void format(std::ostream& os, LogEvent::ptr event) = 0;
+    };
+    void init();
+private:
+    std::string m_pattern;
+    //要输出多少个项
+    std::vector<FormatItem::ptr> m_item;
 };
 
 //日志输出地

@@ -74,6 +74,29 @@ bool FileLogAppender::reopen(){
 //在析构的时候 会把所有的内容给输出出来
 //所以还需要个留对象
 
+LogFormatter::LogFormatter(const std::string& pattern)
+    : m_pattern(pattern){
 
+}
+
+std::string LogFormatter::format(LogEvent::ptr event){
+    std::stringstream ss;
+    for(auto& i : m_item){
+        i->format(ss, event);
+    }
+    return ss.str();
+}
+
+void LogFormatter::init(){
+    std::vector<std::pair<std::string, int>> vec;
+    size_t last_pos = 0;
+    for(size_t i = 0; i < m_pattern.size(); ++i){
+        if(m_pattern[i] == '%'){
+            if((i + 1) < m_pattern.size()){
+                
+            }
+        }
+    }
+}
 
 }
