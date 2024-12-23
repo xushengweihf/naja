@@ -21,7 +21,7 @@
 
 namespace xsw{
 
-
+class Logger;
 //日志事件
 class LogEvent{
 public:
@@ -35,6 +35,7 @@ public:
     uint32_t getFiberId() const { return m_fiberId; }
     uint64_t getTime() const { return m_time; }
     std::string getContent() const { return m_content; }
+    std::string getThreadName() const { return m_threadName; }
 private:
     const char* m_file = nullptr; //文件名
     int32_t m_line = 0;           //行号
@@ -43,6 +44,7 @@ private:
     uint32_t m_fiberId = 0;       //协程id
     uint64_t m_time = 0;          //时间戳
     std::string m_content;        //消息
+    std::string m_threadName;
 };
 
 //日志级别
@@ -67,20 +69,25 @@ public:
     LogFormatter(const std::string& pattern);
 
     //%t    %thread_id %m%n
-    std::string format(LogLevel::Level level, LogEvent::ptr event);
+    std::string format(std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::ptr event);
 public:
     //日志解析的子模块
     class FormatItem{
     public:
         typedef std::shared_ptr<FormatItem> ptr;
         virtual ~FormatItem() {}
-        virtual void format(std::ostream& os, LogLevel::Level level, LogEvent::ptr event) = 0;
+        virtual void format(std::ostream& os, std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::ptr event) = 0;
     };
     void init();
+
+    bool isError() const { return m_error; }
 private:
+    //日志格式模板
     std::string m_pattern;
-    //要输出多少个项
-    std::vector<FormatItem::ptr> m_item;
+    //日志格式解析后格式，要输出多少个项
+    std::vector<FormatItem::ptr> m_items;
+    //是否有错
+    bool m_error = false;
 };
 
 //日志输出地
@@ -88,9 +95,9 @@ class LogAppender{
 public:
     typedef std::shared_ptr<LogAppender> ptr;
     //因为日志输出的地方有很多，所以设为虚函数
-    virtual ~LogAppender();
+    virtual ~LogAppender() {}
 
-    virtual void log(LogLevel::Level level, LogEvent::ptr event) = 0;
+    virtual void log(std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::ptr event) = 0;
     void setFormatter(LogFormatter::ptr val) { m_formatter = val;}
     LogFormatter::ptr getFormatter() const {return m_formatter;}
 protected://因为下面可能会用到它的level
@@ -100,7 +107,7 @@ protected://因为下面可能会用到它的level
 
 
 //日志器
-class Logger{
+class Logger : public std::enable_shared_from_this<Logger>{
 public:
     typedef std::shared_ptr<Logger> ptr;
     
@@ -119,17 +126,19 @@ public:
     LogLevel::Level getLevel() const { return m_level;}
     void setLevel(LogLevel::Level level) { m_level = level;}
     
+    const std::string& getName() const { return m_name; }
 private:
     std::string m_name;                      //日志名称
     LogLevel::Level m_level;                 //日志级别
     std::list<LogAppender::ptr> m_appenders; //Appender是个列表 输出目的地的集合
+    LogFormatter::ptr m_formatter;
 };
 
 //输出到控制台的Appender
 class StdoutLogAppender : public LogAppender{
 public:
     typedef std::shared_ptr<StdoutLogAppender> ptr;
-    void log(LogLevel::Level level, LogEvent::ptr event) override;
+    void log(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override;
 private:
 };
 
@@ -138,7 +147,7 @@ class FileLogAppender : public LogAppender{
 public:
     typedef std::shared_ptr<FileLogAppender> ptr;
     FileLogAppender(const std::string& filename);
-    void log(LogLevel::Level level, LogEvent::ptr event) override;
+    void log(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override;
 
     //重新打开文件，文件打开成功返回true
     bool reopen();
