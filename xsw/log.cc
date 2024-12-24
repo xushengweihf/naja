@@ -139,11 +139,23 @@ private:
     std::string m_string;   
 };
 
-Logger::Logger(const std::string& name)
-    : m_name(name){
+LogEvent::LogEvent(const char* file, int32_t line, uint32_t elapse, uint32_t thread_id, uint32_t fiber_id, uint64_t time)
+    : m_file(file)
+    , m_line(line)
+    , m_elapse(elapse)
+    , m_threadId(thread_id)
+    , m_fiberId(fiber_id)
+    , m_time(time){
+}
+
+Logger::Logger(const std::string& name) : m_name(name), m_level(LogLevel::Level::DEBUG){
+    m_formatter.reset(new LogFormatter("%d{%Y-%m-%d %H:%M:%S}%T%t%T%N%T%F%T[%p]%T[%c]%T%f:%l%T%m%n"));
 }
 
 void Logger::addAppender(LogAppender::ptr appender){
+    if(!appender->getFormatter()){
+        appender->setFormatter(m_formatter);
+    }
     m_appenders.push_back(appender);//这里先不考虑线程安全
 }
 void Logger::delAppender(LogAppender::ptr appender){
@@ -292,7 +304,7 @@ void LogFormatter::init(){
     }
     static std::map<std::string, std::function<FormatItem::ptr(const std::string& str)>> s_format_items = {
 #define XX(str, C) \
-    {#str, [](const std::string& fmt) -> FormatItem::ptr { return std::make_shared<C>(fmt); }}
+    {#str, [](const std::string& fmt) { return FormatItem::ptr(new C(fmt));}}
 
         XX(m, MessageFormatItem),           //m:消息
         XX(p, LevelFormatItem),             //p:日志级别
@@ -322,7 +334,6 @@ void LogFormatter::init(){
 
     for(auto& i : vec) {
         if(std::get<2>(i) == 0){
-            //m_item.push_back(std::make_shared<FormatItem>(std::get<0>(i)));
             m_items.push_back(FormatItem::ptr(new StringFormatItem(std::get<0>(i))));
         } else {
             auto it = s_format_items.find(std::get<0>(i));
