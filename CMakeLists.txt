@@ -66,7 +66,7 @@ set(
 # target_link_libraries(test ${LIBS})
 
 self_add_executable(main "tests/main_test.cc" xsw "${LIBS}")
-# self_add_executable(log "tests/log_test.cc" xsw "${LIBS}")
+self_add_executable(log "tests/log_test.cc" xsw "${LIBS}")
 
 # 指定执行文件的输出目录为当前文件夹下的bin目录
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
